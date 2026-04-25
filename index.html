@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matrice des vulnérabilités décisionnelles</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+/* ── RESET & ROOT ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy:   #1A2346;
+  --navy2:  #232E58;
+  --navy3:  #2D3A70;
+  --gold:   #C4973A;
+  --gold2:  #F0C96A;
+  --ok:     #1E7A4A;
+  --warn:   #C47A1A;
+  --hi:     #B03020;
+  --crit:   #8B1A1A;
+  --bg:     #F3F4F9;
+  --surf:   #FFFFFF;
+  --surf2:  #EDF0F8;
+  --surf3:  #E2E6F2;
+  --txt:    #1A2346;
+  --txt2:   #5A637A;
+  --txt3:   #9AA3BE;
+  --bdr:    rgba(26,35,70,.1);
+  --r:      10px;
+  --r2:     6px;
+  --fh:     'Syne', sans-serif;
+  --fb:     'DM Sans', sans-serif;
+  --trans:  .18s ease;
+}
+
+body {
+  font-family: var(--fb);
+  background: var(--bg);
+  color: var(--txt);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── LAYOUT ── */
+.shell {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+/* ── HEADER ── */
+.hdr {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--bdr);
+}
+.hdr-kicker {
+  font-family: var(--fh);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: .4rem;
+}
+.hdr h1 {
+  font-family: var(--fh);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -.02em;
+  line-height: 1.2;
+  margin-bottom: .5rem;
+}
+.hdr-sub {
+  font-size: 13px;
+  color: var(--txt2);
+  max-width: 540px;
+  line-height: 1.65;
+}
+
+/* ── STEP RAIL ── */
+.step-rail {
+  display: flex;
+  align-items: stretch;
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 2px 12px rgba(26,35,70,.08);
+}
+.sr-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-right: 1px solid var(--bdr);
+  cursor: pointer;
+  transition: background var(--trans);
+  user-select: none;
+}
+.sr-item:last-child { border-right: none; }
+.sr-item:hover:not(.active) { background: var(--surf2); }
+.sr-item.active { background: var(--navy); }
+.sr-item.done { background: var(--surf2); }
+.sr-item.locked { cursor: not-allowed; opacity: .5; }
+.sr-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--fh);
+  font-size: 10px; font-weight: 700;
+  flex-shrink: 0;
+  transition: background var(--trans), color var(--trans);
+}
+.sr-item:not(.active):not(.done) .sr-num { background: var(--surf3); color: var(--txt3); }
+.sr-item.active .sr-num { background: rgba(255,255,255,.2); color: #fff; }
+.sr-item.done .sr-num { background: var(--ok); color: #fff; }
+.sr-label {
+  font-size: 11px; font-weight: 500;
+  line-height: 1.2;
+}
+.sr-item:not(.active):not(.done) .sr-label { color: var(--txt2); }
+.sr-item.active .sr-label { color: #fff; }
+.sr-item.done .sr-label { color: var(--txt2); }
+
+/* ── CONTENT PANELS ── */
+.panel { display: none; }
+.panel.on { display: block; }
+
+/* ── SECTION TITLE ── */
+.sec-title {
+  font-family: var(--fh);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--txt3);
+  margin-bottom: .75rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sec-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--bdr);
+}
+
+/* ── INSTRUCTION BANNER ── */
+.instr {
+  background: var(--surf2);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 var(--r2) var(--r2) 0;
+  padding: .7rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 12.5px;
+  color: var(--txt2);
+  line-height: 1.6;
+}
+.instr strong { color: var(--txt); font-weight: 500; }
+
+/* ── OPTION GRID ── */
+.opts { display: grid; gap: 6px; }
+.opts-2 { grid-template-columns: 1fr 1fr; }
+.opts-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+.opt {
+  background: var(--surf);
+  border: 1.5px solid var(--bdr);
+  border-radius: var(--r2);
+  padding: 11px 13px;
+  cursor: pointer;
+  transition: border-color var(--trans), background var(--trans), transform .1s;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  font-family: var(--fb);
+}
+.opt:hover { border-color: rgba(26,35,70,.25); background: var(--surf2); }
+.opt:active { transform: scale(.99); }
+.opt.sel {
+  border-color: var(--navy);
+  background: #EEF2FF;
+}
+.opt-icon {
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.opt-text { flex: 1; }
+.opt-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--txt);
+  display: block;
+  margin-bottom: 2px;
+}
+.opt.sel .opt-label { color: var(--navy); }
+.opt-desc {
+  font-size: 11px;
+  color: var(--txt2);
+  line-height: 1.5;
+  font-weight: 300;
+}
+.opt-ref {
+  font-size: 10px;
+  color: var(--txt3);
+  font-style: italic;
+  margin-top: 3px;
+  display: block;
+}
+/* Hiérarchie étape 2 — signal en premier, théorie en second */
+.opt-signal {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-top: 5px;
+  margin-bottom: 4px;
+}
+.opt-signal-icon {
+  font-size: 10px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  line-height: 1;
+}
+.opt-signal-text {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--navy);
+  line-height: 1.45;
+  font-style: italic;
+}
+.opt.sel .opt-signal-text { color: var(--navy); }
+.opt-theory {
+  font-size: 10.5px;
+  color: var(--txt2);
+  line-height: 1.5;
+  font-weight: 300;
+  border-top: 1px solid var(--bdr);
+  padding-top: 5px;
+  margin-top: 2px;
+  display: block;
+}
+
+/* Couleurs icône par niveau */
+.ic-ok   { background: #E5F5EC; color: #1E7A4A; }
+.ic-warn { background: #FEF3E2; color: #C47A1A; }
+.ic-hi   { background: #FDEAEA; color: #B03020; }
+.ic-crit { background: #F5E0E0; color: #8B1A1A; }
+.ic-b1   { background: #EEF2FF; color: #1A2346; }
+.ic-b2   { background: #E8EDFB; color: #2D3A70; }
+.ic-b3   { background: #DDE4FA; color: #3A4B8A; }
+.ic-b4   { background: #D1DAF8; color: #1A2346; }
+.ic-g1   { background: #E5F5EC; color: #1E7A4A; }
+.ic-g2   { background: #FDEAEA; color: #B03020; }
+
+/* ── SPACER ── */
+.gap { margin-bottom: 1rem; }
+.gap-sm { margin-bottom: .6rem; }
+
+/* ── NAV BUTTONS ── */
+.nav-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+.btn {
+  font-family: var(--fh);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 9px 20px;
+  border-radius: 20px;
+  border: 1.5px solid var(--bdr);
+  background: var(--surf);
+  color: var(--txt2);
+  cursor: pointer;
+  transition: all var(--trans);
+}
+.btn:hover { color: var(--txt); border-color: rgba(26,35,70,.3); }
+.btn-primary {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--navy2); }
+.btn-reset {
+  background: transparent;
+  color: var(--txt3);
+  border-color: transparent;
+}
+.btn-reset:hover { color: var(--txt2); }
+
+/* ── DIAGNOSTIC ── */
+.diag-card {
+  background: var(--surf);
+  border-radius: var(--r);
+  border: 1px solid var(--bdr);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.diag-top {
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--bdr);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.diag-badge {
+  font-family: var(--fh);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  padding: 3px 10px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+.diag-score-wrap { text-align: right; }
+.diag-score-n {
+  font-family: var(--fh);
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+}
+.diag-score-lbl {
+  font-size: 10px;
+  color: var(--txt3);
+  margin-top: 2px;
+}
+.gauge-bg {
+  height: 6px;
+  background: var(--surf3);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 6px;
+  width: 80px;
+  margin-left: auto;
+}
+.gauge-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width .5s cubic-bezier(.4,0,.2,1);
+}
+.diag-body { padding: 1rem 1.25rem; }
+.diag-config-name {
+  font-family: var(--fh);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--navy);
+  margin-bottom: .4rem;
+}
+.diag-desc {
+  font-size: 12.5px;
+  color: var(--txt2);
+  line-height: 1.7;
+  margin-bottom: .85rem;
+}
+.diag-refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.diag-ref-tag {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--surf2);
+  color: var(--txt2);
+  border: 1px solid var(--bdr);
+}
+
+/* ── SYNTHESIS GRID ── */
+.synth-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+.synth-card {
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r2);
+  padding: .85rem 1rem;
+}
+.synth-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--txt3);
+  margin-bottom: .3rem;
+}
+.synth-val {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--txt);
+  line-height: 1.4;
+}
+
+/* ── CORE CARDS ── */
+.core-section { margin-bottom: 1.25rem; }
+.core-cards { display: flex; flex-direction: column; gap: 6px; }
+.core-card {
+  border: 1px solid var(--bdr);
+  border-radius: var(--r2);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color var(--trans);
+}
+.core-card:hover { border-color: rgba(26,35,70,.25); }
+.core-card.open { border-color: var(--navy); }
+.core-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--surf);
+}
+.core-mod {
+  font-family: var(--fh);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  padding: 2px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+.core-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--txt);
+  flex: 1;
+}
+.core-target {
+  font-size: 10px;
+  color: var(--txt3);
+  margin-right: 4px;
+}
+.core-arr {
+  font-size: 10px;
+  color: var(--txt3);
+  transition: transform var(--trans);
+}
+.core-card.open .core-arr { transform: rotate(180deg); }
+.core-body {
+  display: none;
+  padding: 10px 12px;
+  background: var(--surf2);
+  border-top: 1px solid var(--bdr);
+}
+.core-card.open .core-body { display: block; }
+.core-action {
+  font-size: 12px;
+  color: var(--txt);
+  line-height: 1.7;
+  margin-bottom: .5rem;
+}
+.core-source {
+  font-size: 10px;
+  color: var(--txt3);
+  font-style: italic;
+}
+
+/* Module color tags */
+.m-sense   { background: #D6EAF8; color: #1A5276; }
+.m-decide  { background: #1A2346; color: #fff; }
+.m-command { background: #E8EFF9; color: #1A2346; }
+.m-human   { background: #F5E8F0; color: #6B1A40; }
+.m-narr    { background: #FDF3DC; color: #7A5010; }
+
+/* ── RESET LINK ── */
+.restart-row {
+  text-align: center;
+  margin-top: 1.5rem;
+}
+.restart-link {
+  font-size: 11px;
+  color: var(--txt3);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-family: var(--fh);
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.restart-link:hover { color: var(--txt2); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 580px) {
+  .opts-2, .opts-3 { grid-template-columns: 1fr; }
+  .synth-grid { grid-template-columns: 1fr; }
+  .sr-label { display: none; }
+  .shell { padding: 1rem 1rem 3rem; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div class="hdr-kicker">Outil de diagnostic décisionnel</div>
+    <h1>Matrice des vulnérabilités décisionnelles</h1>
+    <p class="hdr-sub">Identifiez les mécanismes qui altèrent le jugement collectif en situation de crise et activez les contre-mesures adaptées.</p>
+  </header>
+
+  <!-- STEP RAIL -->
+  <div class="step-rail">
+    <div class="sr-item active" id="sr1" onclick="navStep(1)"><div class="sr-num">1</div><div class="sr-label">Pression décisionnelle</div></div>
+    <div class="sr-item" id="sr2" onclick="navStep(2)"><div class="sr-num">2</div><div class="sr-label">Mécanismes perturbateurs</div></div>
+    <div class="sr-item" id="sr3" onclick="navStep(3)"><div class="sr-num">3</div><div class="sr-label">Configuration organisationnelle</div></div>
+    <div class="sr-item" id="sr4" onclick="navStep(4)"><div class="sr-num">4</div><div class="sr-label">Diagnostic</div></div>
+  </div>
+
+  <!-- ═══════════════════════ ÉTAPE 1 ═══════════════════════ -->
+  <div class="panel on" id="p1">
+
+    <div class="instr">
+      <strong>Étape 1 sur 3.</strong> Qualifiez les conditions dans lesquelles la décision doit être prise. Ces trois dimensions définissent l'espace de contraintes au sens de Simon (1947).
+    </div>
+
+    <div class="sec-title">Contrainte temporelle</div>
+    <div class="opts opts-3 gap">
+      <button class="opt" data-g="urgence" data-v="faible" onclick="pick(this)">
+        <div class="opt-icon ic-ok">🟢</div>
+        <div class="opt-text">
+          <span class="opt-label">Faible</span>
+          <span class="opt-desc">Délai de délibération disponible. Comparaison d'options possible.</span>
+        </div>
+      </button>
+      <button class="opt" data-g="urgence" data-v="forte" onclick="pick(this)">
+        <div class="opt-icon ic-warn">🟡</div>
+        <div class="opt-text">
+          <span class="opt-label">Forte</span>
+          <span class="opt-desc">Quelques heures disponibles. Délibération contrainte.</span>
+        </div>
+      </button>
+      <button class="opt" data-g="urgence" data-v="critique" onclick="pick(this)">
+        <div class="opt-icon ic-crit">🔴</div>
+        <div class="opt-text">
+          <span class="opt-label">Critique</span>
+          <span class="opt-desc">Décision immédiate exigée. Pas de comparaison possible.</span>
+        </div>
+      </button>
+    </div>
+
+    <div class="sec-title">Incertitude informationnelle</div>
+    <div class="opts opts-3 gap">
+      <button class="opt" data-g="incert" data-v="faible" onclick="pick(this)">
+        <div class="opt-icon ic-ok">📋</div>
+        <div class="opt-text">
+          <span class="opt-label">Faible</span>
+          <span class="opt-desc">Données disponibles, fiables et complètes.</span>
+        </div>
+      </button>
+      <button class="opt" data-g="incert" data-v="partielle" onclick="pick(this)">
+        <div class="opt-icon ic-warn">📋</div>
+        <div class="opt-text">
+          <span class="opt-label">Partielle</span>
+          <span class="opt-desc">Lacunes identifiées. Données contradictoires.</span>
+        </div>
+      </button>
+      <button class="opt" data-g="incert" data-v="forte" onclick="pick(this)">
+        <div class="opt-icon ic-crit">📋</div>
+        <div class="opt-text">
+          <span class="opt-label">Forte</span>
+          <span class="opt-desc">Données fragmentaires, non vérifiées ou absentes.</span>
+        </div>
+      </button>
+    </div>
+
+    <div class="sec-title">Pression médiatique et de légitimité</div>
+    <div class="opts opts-3 gap">
+      <button class="opt" data-g="media" data-v="nulle" onclick="pick(this)">
+        <div class="opt-icon ic-ok">📡</div>
+        <div class="opt-text">
+          <span class="opt-label">Nulle</span>
+          <span class="opt-desc">Huis clos. Aucune exposition publique immédiate.</span>
+        </div>
+      </button>
+      <button class="opt" data-g="media" data-v="mod" onclick="pick(this)">
+        <div class="opt-icon ic-warn">📡</div>
+        <div class="opt-text">
+          <span class="opt-label">Modérée</span>
+          <span class="opt-desc">Couverture presse différée. Légitimité en question.</span>
+        </div>
+      </button>
+      <button class="opt" data-g="media" data-v="forte" onclick="pick(this)">
+        <div class="opt-icon ic-crit">📡</div>
+        <div class="opt-text">
+          <span class="opt-label">Active</span>
+          <span class="opt-desc">Réseaux sociaux en temps réel. Décision jugée publiquement.</span>
+        </div>
+      </button>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-primary" onclick="goStep(2)">Mécanismes perturbateurs →</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ ÉTAPE 2 ═══════════════════════ -->
+  <div class="panel" id="p2">
+
+    <div class="instr">
+      <strong>Étape 2 sur 3.</strong> Identifiez les mécanismes cognitifs ou collectifs actifs au sein de l'équipe. <strong>Sélection multiple possible</strong> — cochez tout ce qui est observable dans la situation. Ces mécanismes constituent à la fois des ressources d'action rapide et des sources de dérive (Kahneman &amp; Tversky, 1974 ; Janis, 1972).
+    </div>
+    <div id="biais-counter" style="font-size:11px;color:var(--txt3);margin-bottom:.85rem;font-family:var(--fh);font-weight:600;letter-spacing:.04em;text-transform:uppercase;"></div>
+
+    <div class="sec-title">Heuristiques cognitives</div>
+    <div class="opts gap">
+
+      <button class="opt" data-g="biais" data-v="disponibilite" onclick="toggleBiais(this)">
+        <div class="opt-icon ic-b1">🧠</div>
+        <div class="opt-text">
+          <span class="opt-label">Heuristique de disponibilité</span>
+          <div class="opt-signal"><span class="opt-signal-icon">⚡</span><span class="opt-signal-text">"On a déjà vécu ça, c'est forcément pareil."</span></div>
+          <span class="opt-theory">La probabilité d'un événement est évaluée par la facilité à s'en souvenir. Les événements récents ou spectaculaires sont surestimés, les menaces moins saillantes négligées. — Kahneman & Tversky (1974)</span>
+        </div>
+      </button>
+
+      <button class="opt" data-g="biais" data-v="representativite" onclick="toggleBiais(this)">
+        <div class="opt-icon ic-b2">🧠</div>
+        <div class="opt-text">
+          <span class="opt-label">Heuristique de représentativité</span>
+          <div class="opt-signal"><span class="opt-signal-icon">⚡</span><span class="opt-signal-text">"C'est exactement comme la crise de [référence passée]."</span></div>
+          <span class="opt-theory">La situation est assimilée à un cas connu ou à un prototype familier. Les signaux spécifiques qui en révèlent la singularité sont sous-estimés. — Kahneman & Tversky (1974)</span>
+        </div>
+      </button>
+
+      <button class="opt" data-g="biais" data-v="ancrage" onclick="toggleBiais(this)">
+        <div class="opt-icon ic-b3">🧠</div>
+        <div class="opt-text">
+          <span class="opt-label">Effet d'ancrage</span>
+          <div class="opt-signal"><span class="opt-signal-icon">⚡</span><span class="opt-signal-text">On revient toujours au chiffre ou au scénario initial, même après correction.</span></div>
+          <span class="opt-theory">La première information reçue cadre durablement toutes les décisions suivantes. La correction reste insuffisante même après la mise à jour des données. — Kahneman & Tversky (1974)</span>
+        </div>
+      </button>
+
+      <button class="opt" data-g="biais" data-v="affect" onclick="toggleBiais(this)">
+        <div class="opt-icon ic-b4">🧠</div>
+        <div class="opt-text">
+          <span class="opt-label">Heuristique d'affect</span>
+          <div class="opt-signal"><span class="opt-signal-icon">⚡</span><span class="opt-signal-text">La décision "qui rassure" l'emporte sans analyse des données disponibles.</span></div>
+          <span class="opt-theory">La décision est guidée par l'état émotionnel du décideur plutôt que par les données disponibles. La solution rassurante prime sur la mesure la plus efficace. — Kahneman & Tversky (1974)</span>
+        </div>
+      </button>
+
+      <button class="opt" data-g="biais" data-v="simulation" onclick="toggleBiais(this)">
+        <div class="opt-icon ic-b1">🧠</div>
+        <div class="opt-text">
+          <span class="opt-label">Heuristique de simulation</span>
+          <div class="opt-signal"><span class="opt-signal-icon">⚡</span><span class="opt-signal-text">Un scénario difficile à imaginer n'est jamais évoqué ni évalué.</span></div>
+          <span class="opt-theory">Les scénarios faciles à imaginer sont perçus comme probables. Les risques difficiles à représenter mentalement sont systématiquement sous-pondérés. — Kahneman & Tversky (1974)</span>
+        </div>
+      </button>
+
+    </div>
+
+    <div class="sec-title gap-sm">Biais et dynamiques collectives</div>
+    <div class="opts gap">
+
+      <button class="opt" data-g="biais" data-v="confirmation" onclick="toggleBiais(this)">
+        <div class="opt-icon ic-hi">⚠️</div>
+        <div class="opt-text">
+          <span class="opt-label">Biais de confirmation</span>
+          <div class="opt-signal"><span class="opt-signal-icon">⚡</span><span class="opt-signal-text">"On le savait depuis le début." Les signaux contraires ne remontent pas.</span></div>
+          <span class="opt-theory">L'interprétation est verrouillée sur l'hypothèse initiale. Les informations contradictoires sont filtrées ou ignorées à chaque niveau de la chaîne. — Kahneman & Tversky (1974)</span>
+        </div>
+      </button>
+
+      <button class="opt" data-g="biais" data-v="tunnel" onclick="toggleBiais(this)">
+        <div class="opt-icon ic-hi">⚠️</div>
+        <div class="opt-text">
+          <span class="opt-label">Effet tunnel</span>
+          <div class="opt-signal"><span class="opt-signal-icon">⚡</span><span class="opt-signal-text">Personne ne demande "et si on faisait autrement ?" Une seule option est envisagée.</span></div>
+          <span class="opt-theory">Le champ perceptif se réduit à une seule option ou dimension. Les alternatives et indices contextuels (dropped cues) deviennent invisibles sous l'effet de la focalisation. — Kahneman & Tversky (1974) — Weick (1995)</span>
+        </div>
+      </button>
+
+      <button class="opt" data-g="biais" data-v="conformite" onclick="toggleBiais(this)">
+        <div class="opt-icon ic-hi">⚠️</div>
+        <div class="opt-text">
+          <span class="opt-label">Biais de conformité — Groupthink</span>
+          <div class="opt-signal"><span class="opt-signal-icon">⚡</span><span class="opt-signal-text">Vote unanime sur une décision risquée en moins de 2 minutes. Aucun désaccord exprimé.</span></div>
+          <span class="opt-theory">La cohésion du groupe prime sur l'évaluation réaliste. Les doutes sont tus, les dissidences écartées. L'unanimité est une illusion construite par l'autocensure collective. — Janis (1972)</span>
+        </div>
+      </button>
+
+      <button class="opt" data-g="biais" data-v="stress" onclick="toggleBiais(this)">
+        <div class="opt-icon ic-crit">⚠️</div>
+        <div class="opt-text">
+          <span class="opt-label">Stress décisionnel — méta-amplificateur</span>
+          <div class="opt-signal"><span class="opt-signal-icon">⚡</span><span class="opt-signal-text">Phrases courtes, interruptions fréquentes, refus d'attendre ou de délibérer.</span></div>
+          <span class="opt-theory">La pression temporelle et émotionnelle active un mode de traitement accéléré qui amplifie simultanément tous les autres biais. Le passage à l'acte prend le pas sur l'analyse. — Kahneman (2011) — Simon (1947)</span>
+        </div>
+      </button>
+
+      <button class="opt" data-g="biais" data-v="pouvoir" onclick="toggleBiais(this)">
+        <div class="opt-icon ic-hi">⚠️</div>
+        <div class="opt-text">
+          <span class="opt-label">Jeux de pouvoir — zones d'incertitude</span>
+          <div class="opt-signal"><span class="opt-signal-icon">⚡</span><span class="opt-signal-text">Rétention d'information stratégique entre services. Certains acteurs bloquent la circulation des données.</span></div>
+          <span class="opt-theory">Des acteurs exploitent l'ambiguïté organisationnelle pour imposer leurs préférences. Les désaccords se transforment en ressources d'influence plutôt qu'en débat ouvert. — Crozier & Friedberg (1977)</span>
+        </div>
+      </button>
+
+      <button class="opt" data-g="biais" data-v="empathie" onclick="toggleBiais(this)">
+        <div class="opt-icon ic-ok">⚠️</div>
+        <div class="opt-text">
+          <span class="opt-label">Biais d'empathie — sur-identification</span>
+          <div class="opt-signal"><span class="opt-signal-icon">⚡</span><span class="opt-signal-text">Engorgement des équipes par des contributions spontanées non qualifiées, difficiles à refuser.</span></div>
+          <span class="opt-theory">L'aide spontanée est acceptée par incapacité émotionnelle à refuser, même lorsqu'elle n'est pas qualifiée. La norme de réciprocité crée une dette symbolique difficile à surmonter. — Goffman (1967) — Cialdini (2001)</span>
+        </div>
+      </button>
+
+    </div>
+
+    <div class="nav-row">
+      <button class="btn" onclick="goStep(1)">← Retour</button>
+      <button class="btn btn-primary" onclick="goStep(3)">Configuration organisationnelle →</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ ÉTAPE 3 ═══════════════════════ -->
+  <div class="panel" id="p3">
+
+    <div class="instr">
+      <strong>Étape 3 sur 3.</strong> Analysez la structure dans laquelle la décision est produite. La configuration organisationnelle amplifie ou atténue les mécanismes identifiés à l'étape 2.
+    </div>
+
+    <div class="sec-title">Structure décisionnelle</div>
+    <div class="opts gap">
+      <button class="opt" data-g="orga" data-v="hier-fort" onclick="pick(this)">
+        <div class="opt-icon ic-b1">🏛️</div>
+        <div class="opt-text">
+          <span class="opt-label">Hiérarchisée — gradient d'autorité fort</span>
+          <span class="opt-desc">Centralisation de la décision. Droit à la contradiction absent ou informel. L'information critique est filtrée à chaque niveau. La remontée d'alerte est inhibée par la culture de l'obéissance.</span>
+          <span class="opt-ref">Edmondson (2019) — sécurité psychologique insuffisante</span>
+        </div>
+      </button>
+      <button class="opt" data-g="orga" data-v="hier-mod" onclick="pick(this)">
+        <div class="opt-icon ic-b2">🏛️</div>
+        <div class="opt-text">
+          <span class="opt-label">Hiérarchisée — gradient modéré</span>
+          <span class="opt-desc">Centralisation avec mécanismes formalisés de remontée d'information. Le droit à la contradiction est institutionnalisé et valorisé. La sécurité psychologique est établie.</span>
+          <span class="opt-ref">Edmondson (2019) — modèle CRM aéronautique</span>
+        </div>
+      </button>
+      <button class="opt" data-g="orga" data-v="collegiale" onclick="pick(this)">
+        <div class="opt-icon ic-b3">🏛️</div>
+        <div class="opt-text">
+          <span class="opt-label">Collégiale</span>
+          <span class="opt-desc">Délibération collective. Richesse des points de vue. Risque élevé de groupthink sous pression temporelle forte, en particulier en l'absence d'arbitre désigné.</span>
+          <span class="opt-ref">Janis (1972) — March & Olsen (1976)</span>
+        </div>
+      </button>
+      <button class="opt" data-g="orga" data-v="fluide" onclick="pick(this)">
+        <div class="opt-icon ic-b4">🏛️</div>
+        <div class="opt-text">
+          <span class="opt-label">Fluide — adaptative</span>
+          <span class="opt-desc">Autorité émergente selon les compétences. Bonne détection des signaux faibles. Risque de dilution des responsabilités et d'absence de point d'arbitrage clair en situation de crise.</span>
+          <span class="opt-ref">March & Olsen — modèle de la poubelle (1972)</span>
+        </div>
+      </button>
+    </div>
+
+    <div class="sec-title gap-sm">Culture organisationnelle</div>
+    <div class="opts opts-2 gap">
+      <button class="opt" data-g="culture" data-v="hro" onclick="pick(this)">
+        <div class="opt-icon ic-g1">🔬</div>
+        <div class="opt-text">
+          <span class="opt-label">Culture HRO — haute fiabilité</span>
+          <span class="opt-desc">Obsession des signaux faibles. Défi systématique aux routines. Remontée d'information valorisée. La contradiction est une compétence, non une menace.</span>
+          <span class="opt-ref">Weick & Sutcliffe (2001)</span>
+        </div>
+      </button>
+      <button class="opt" data-g="culture" data-v="deviation" onclick="pick(this)">
+        <div class="opt-icon ic-g2">🔬</div>
+        <div class="opt-text">
+          <span class="opt-label">Normalisation de la déviance</span>
+          <span class="opt-desc">Des pratiques anormales sont devenues routinières par tolérance progressive. Les risques sont invisibles. L'organisation ne perçoit plus ses propres angles morts.</span>
+          <span class="opt-ref">Vaughan — Challenger (1996)</span>
+        </div>
+      </button>
+    </div>
+
+    <div class="sec-title gap-sm">Gestion de l'information</div>
+    <div class="opts opts-2 gap">
+      <button class="opt" data-g="info" data-v="fluidite" onclick="pick(this)">
+        <div class="opt-icon ic-ok">📤</div>
+        <div class="opt-text">
+          <span class="opt-label">Culture de fluidité</span>
+          <span class="opt-desc">L'information circule rapidement et sans filtre. Bonne détection des anomalies, mais risque de surcharge cognitive et de relai de données non validées.</span>
+        </div>
+      </button>
+      <button class="opt" data-g="info" data-v="retention" onclick="pick(this)">
+        <div class="opt-icon ic-hi">📤</div>
+        <div class="opt-text">
+          <span class="opt-label">Culture de rétention</span>
+          <span class="opt-desc">La confidentialité prime sur la transparence. Le cloisonnement entre services aggrave la crise dès les premiers instants en retardant les décisions collectives.</span>
+        </div>
+      </button>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn" onclick="goStep(2)">← Retour</button>
+      <button class="btn btn-primary" onclick="goStep(4)">Voir le diagnostic →</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ ÉTAPE 4 — DIAGNOSTIC ═══════════════════════ -->
+  <div class="panel" id="p4">
+    <div id="diag-out"></div>
+    <div id="synth-out"></div>
+    <div class="core-section" id="core-out"></div>
+    <div class="nav-row">
+      <button class="btn" onclick="goStep(3)">← Modifier</button>
+      <button class="btn btn-reset" onclick="fullReset()">Recommencer</button>
+    </div>
+  </div>
+
+</div><!-- /shell -->
+
+<script>
+/* ═══════ STATE ═══════ */
+/* biais = Set (multi-sélection) — tous les autres = valeur unique */
+const S = { urgence:null, incert:null, media:null, biais: new Set(), orga:null, culture:null, info:null };
+let currentStep = 1;
+
+/* ═══════ PICK — mono-sélection (étapes 1 et 3) ═══════ */
+function pick(el) {
+  const g = el.dataset.g;
+  document.querySelectorAll(`[data-g="${g}"]`).forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  S[g] = el.dataset.v;
+}
+
+/* ═══════ TOGGLE BIAIS — multi-sélection (étape 2) ═══════ */
+function toggleBiais(el) {
+  const v = el.dataset.v;
+  if (S.biais.has(v)) {
+    S.biais.delete(v);
+    el.classList.remove('sel');
+  } else {
+    S.biais.add(v);
+    el.classList.add('sel');
+  }
+  updateCounter();
+}
+
+function updateCounter() {
+  const n = S.biais.size;
+  const el = document.getElementById('biais-counter');
+  if (!el) return;
+  el.textContent = n === 0
+    ? 'Aucun mécanisme sélectionné'
+    : n === 1
+      ? '1 mécanisme sélectionné'
+      : `${n} mécanismes sélectionnés`;
+  el.style.color = n === 0 ? 'var(--txt3)' : 'var(--navy)';
+}
+
+/* ═══════ NAVIGATION ═══════ */
+function goStep(n) {
+  currentStep = n;
+  [1,2,3,4].forEach(i => {
+    document.getElementById('p' + i).classList.toggle('on', i === n);
+    const sr = document.getElementById('sr' + i);
+    sr.className = 'sr-item' + (i < n ? ' done' : i === n ? ' active' : '');
+  });
+  if (n === 2) updateCounter();
+  if (n === 4) buildDiag();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* Navigation directe depuis le rail — sans restriction */
+function navStep(n) {
+  goStep(n);
+}
+
+function fullReset() {
+  S.urgence = null; S.incert = null; S.media = null;
+  S.biais = new Set();
+  S.orga = null; S.culture = null; S.info = null;
+  document.querySelectorAll('.opt').forEach(b => b.classList.remove('sel'));
+  document.getElementById('diag-out').innerHTML = '';
+  document.getElementById('synth-out').innerHTML = '';
+  document.getElementById('core-out').innerHTML = '';
+  goStep(1);
+}
+
+/* ═══════ SCORE ═══════ */
+function score() {
+  let s = 0;
+  if (S.urgence === 'forte')    s += 1;
+  if (S.urgence === 'critique') s += 2;
+  if (S.incert === 'partielle') s += 1;
+  if (S.incert === 'forte')     s += 2;
+  if (S.media === 'mod')        s += 1;
+  if (S.media === 'forte')      s += 2;
+  const bw = { confirmation:2, tunnel:2, conformite:2, stress:2, pouvoir:2, empathie:1,
+               disponibilite:1, representativite:1, ancrage:2, affect:1, simulation:1 };
+  S.biais.forEach(b => { if (bw[b]) s += bw[b]; });
+  if (S.culture === 'deviation') s += 2;
+  if (S.info === 'retention')    s += 1;
+  /* Interactions orga × biais */
+  if (S.orga === 'hier-fort'  && (S.biais.has('confirmation') || S.biais.has('pouvoir'))) s += 2;
+  if (S.orga === 'collegiale' && (S.biais.has('conformite')   || S.biais.has('ancrage'))) s += 2;
+  if (S.orga === 'fluide'     && S.biais.has('tunnel'))  s += 1;
+  if (S.orga === 'hier-mod')   s = Math.max(s - 1, 0);
+  if (S.culture === 'hro')     s = Math.max(s - 1, 0);
+  return Math.min(s, 10);
+}
+
+function level(sc) {
+  if (sc <= 3) return { lbl:'Risque modéré',    bg:'#E5F5EC', bc:'#1E7A4A', tc:'#1E7A4A', gb:'#1E7A4A' };
+  if (sc <= 5) return { lbl:'Risque élevé',      bg:'#FEF3E2', bc:'#C47A1A', tc:'#C47A1A', gb:'#C47A1A' };
+  if (sc <= 7) return { lbl:'Risque fort',        bg:'#FDEAEA', bc:'#B03020', tc:'#B03020', gb:'#B03020' };
+  return             { lbl:'Risque critique',    bg:'#F5E0E0', bc:'#8B1A1A', tc:'#8B1A1A', gb:'#8B1A1A' };
+}
+
+/* ═══════ CONFIGURATIONS ═══════ */
+const CONFIGS = {
+  'hier-fort+confirmation': {
+    nom: 'Décision verrouillée',
+    desc: 'La structure hiérarchique fermée associée au biais de confirmation produit une interprétation irréversible. Les informations contradictoires sont filtrées à chaque niveau de la chaîne de commandement. La logique d\'appropriateness (March & Olsen) prend le pas sur l\'analyse : la décision légitime dans le contexte institutionnel prime sur la décision juste. La remise en cause devient structurellement impossible.',
+    refs: ['Simon (1947)', 'Kahneman & Tversky (1974)', 'March & Olsen (1976)', 'Crozier & Friedberg (1977)'],
+  },
+  'collegiale+conformite': {
+    nom: 'Consensus artificiel — Groupthink',
+    desc: 'La délibération collective sous pression conformiste produit une apparence d\'unanimité sans débat réel. Les dissidences sont autocensurées. La recherche de cohésion prime sur l\'évaluation réaliste des alternatives. Irving Janis souligne que ce mécanisme opère d\'autant plus fortement que le groupe est cohésif, isolé et soumis à un leader directif.',
+    refs: ['Janis (1972)', 'March & Olsen (1976)', 'Edmondson (2019)'],
+  },
+  'fluide+tunnel': {
+    nom: 'Décision rapide mal calibrée',
+    desc: 'L\'absence d\'arbitre clair dans une structure fluide, couplée à l\'effet tunnel, produit des décisions opérationnellement efficaces à très court terme mais occultant des dimensions entières de la situation. Des indices contextuels essentiels sont abandonnés (dropped cues, Weick). La boucle OODA est rompue : l\'observation des conséquences cesse d\'alimenter la décision.',
+    refs: ['Kahneman & Tversky (1974)', 'Weick (1995)', 'Boyd — OODA (1986)'],
+  },
+  'hier-fort+pouvoir': {
+    nom: 'Zones d\'incertitude instrumentalisées',
+    desc: 'Dans une hiérarchie fermée, les acteurs exploitent l\'ambiguïté organisationnelle pour préserver et étendre leur influence. Les désaccords ne disparaissent pas — ils se transforment en ressources pour ceux qui contrôlent l\'information. L\'ambiguïté, loin d\'être résolue, est activement entretenue par les acteurs qui en tirent un avantage.',
+    refs: ['Crozier & Friedberg (1977)', 'March & Olsen (1976)'],
+  },
+  'collegiale+ancrage': {
+    nom: 'Validation circulaire de l\'ancre',
+    desc: 'Le groupe valide collectivement l\'hypothèse initiale sans la challenger. Les détails saillants deviennent des ancres de sens partagées (Weick). Chaque membre conforte l\'autre dans une lecture commune fondée sur une information partielle ou erronée. La correction est rendue difficile par la pression de cohésion collective.',
+    refs: ['Kahneman & Tversky (1974)', 'Weick (1995)', 'Janis (1972)'],
+  },
+  'default': {
+    nom: 'Configuration à surveiller',
+    desc: 'La combinaison identifiée présente des risques qui méritent une attention explicite. Qualifiez les mécanismes actifs avant de délibérer. Introduisez une micro-pause réflexive, désignez un avocat du diable et vérifiez que le droit à la contradiction est effectif au sein de l\'équipe.',
+    refs: ['Simon (1947)', 'Kahneman & Tversky (1974)', 'Weick (1995)'],
+  },
+};
+
+function getCfg() {
+  /* Priorité aux combinaisons orga+biais les plus critiques */
+  const checks = [
+    ['hier-fort', 'confirmation'],
+    ['hier-fort', 'pouvoir'],
+    ['collegiale', 'conformite'],
+    ['collegiale', 'ancrage'],
+    ['fluide', 'tunnel'],
+  ];
+  for (const [o, b] of checks) {
+    if (S.orga === o && S.biais.has(b)) return CONFIGS[`${o}+${b}`];
+  }
+  return CONFIGS.default;
+}
+
+/* ═══════ CARTES C.O.R.E. ═══════ */
+const CORE = {
+  confirmation: [
+    { mod:'SENSE',  mc:'m-sense',   nom:'Faits vs bruit',
+      action:'Listez en 2 minutes les informations FACTUELLES disponibles, séparées des interprétations. Désignez un membre chargé de challenger chaque fait : "Comment saurions-nous que c\'est faux ?"',
+      source:'Weick — dropped cues (1995)' },
+    { mod:'DECIDE', mc:'m-decide',  nom:'Avocat du diable',
+      action:'Désignez formellement un membre chargé d\'argumenter contre l\'hypothèse dominante. Ce rôle est institutionnel, non personnel. Il est "légitime et valorisé, non un signe de déloyauté." (Janis, 1982, p. 258)',
+      source:'Janis — Groupthink (1972), p. 258' },
+    { mod:'NARRATIVE', mc:'m-narr', nom:'Scénario alternatif',
+      action:'Formulez en 90 secondes le scénario qui invaliderait votre hypothèse actuelle. Si vous ne pouvez pas l\'imaginer, le biais de confirmation est actif. Nommez-le explicitement.',
+      source:'March & Olsen — logique d\'appropriateness (1976)' },
+  ],
+  tunnel: [
+    { mod:'SENSE',  mc:'m-sense',   nom:'Carte des angles morts',
+      action:'"Qu\'est-ce qu\'on ne regarde PAS en ce moment ?" Listez trois dimensions, acteurs ou scénarios non couverts par l\'analyse en cours. Durée : 3 minutes maximum.',
+      source:'Kahneman & Tversky (1974) — Boyd : OODA (1986)' },
+    { mod:'HUMAN',  mc:'m-human',   nom:'Fresh eyes',
+      action:'Faites entrer une personne extérieure à la cellule. Demandez-lui : "Qu\'est-ce que vous voyez qu\'on ne voit plus ?" Sa perspective non ancrée compense les dropped cues collectifs.',
+      source:'Weick — dropped cues (1995)' },
+    { mod:'DECIDE', mc:'m-decide',  nom:'Pause décisionnelle — 3 min',
+      action:'Stop. Personne ne parle. Chaque membre note individuellement : (1) ce dont il est sûr, (2) ce dont il n\'est pas sûr, (3) une option non évoquée. Mise en commun.',
+      source:'Simon (1947) — Boyd OODA (1986)' },
+  ],
+  conformite: [
+    { mod:'DECIDE', mc:'m-decide',  nom:'Vote confidentiel',
+      action:'Avant toute mise en commun, chaque membre note son choix individuellement. Révélez simultanément. La dispersion des avis est de l\'information — ne l\'écrasez pas.',
+      source:'Janis — Groupthink (1972)' },
+    { mod:'HUMAN',  mc:'m-human',   nom:'Droit au doute',
+      action:'Déclarez explicitement : "Exprimer un désaccord est une compétence professionnelle, pas une faiblesse." Demandez à chacun : "Qu\'est-ce qui vous inquiète dans cette décision ?"',
+      source:'Edmondson — The Fearless Organization (2019)' },
+    { mod:'COMMAND',mc:'m-command', nom:'Délai ferme de délibération',
+      action:'Fixez un temps de délibération non extensible, annoncé à l\'avance. "Dans 10 minutes nous décidons, même sans unanimité." Limite la dérive conformiste progressive.',
+      source:'March & Olsen — rituels de stabilisation (1976)' },
+  ],
+  stress: [
+    { mod:'HUMAN',  mc:'m-human',   nom:'Pause décisionnelle obligatoire',
+      action:'Avant toute décision irréversible : 3 minutes de silence. Chacun évalue : "Est-ce que je décide parce que c\'est juste, ou parce que la pression m\'y pousse ?" Verbaliser la réponse.',
+      source:'Kahneman — Thinking Fast and Slow (2011)' },
+    { mod:'SENSE',  mc:'m-sense',   nom:'Triage des priorités',
+      action:'Séparez : (1) urgent ET important, (2) urgent mais non important, (3) peut attendre. Décidez uniquement sur la catégorie 1. Simon : rechercher la solution satisfaisante, pas optimale.',
+      source:'Simon (1947) — Boyd OODA (1986)' },
+    { mod:'NARRATIVE',mc:'m-narr',  nom:'Observateur externe',
+      action:'Désignez un membre dont le rôle unique est d\'observer et de signaler quand le rythme s\'emballe. "Je vois des signaux de précipitation — on s\'arrête 3 minutes avant de continuer."',
+      source:'Edmondson (2019) — Simon (1947)' },
+  ],
+  pouvoir: [
+    { mod:'COMMAND',mc:'m-command', nom:'Cartographie des zones d\'incertitude',
+      action:'Identifiez explicitement : qui contrôle quelle zone d\'incertitude ? Nommez les acteurs et les ressources qu\'ils retiennent. Rendez visible ce qui est ordinairement instrumentalisé.',
+      source:'Crozier & Friedberg — L\'acteur et le système (1977)' },
+    { mod:'DECIDE', mc:'m-decide',  nom:'Clarifier l\'arbitre',
+      action:'"Dans X minutes nous décidons. C\'est Y qui tranche." Désignez explicitement qui a le dernier mot et selon quelle légitimité. Nommer l\'arbitre lève l\'ambiguïté organisationnelle.',
+      source:'Weber — légitimité — March & Olsen (1976)' },
+    { mod:'NARRATIVE',mc:'m-narr',  nom:'Récit collectif partagé',
+      action:'Construisez un narratif commun de la situation avant de délibérer. Le sensemaking conflictuel entre acteurs est lui-même un verrou décisionnel — le partage des interprétations doit précéder la décision.',
+      source:'Weick (1995)' },
+  ],
+  empathie: [
+    { mod:'COMMAND',mc:'m-command', nom:'Politique de refus anticipée',
+      action:'Formulez et communiquez dès le début les critères d\'acceptation des aides extérieures. "Nous acceptons X — les autres offres sont remerciées et orientées vers Z." Prépare à assumer le refus.',
+      source:'FEMA (2015) — Goffman (1967) — Cialdini (2001)' },
+    { mod:'HUMAN',  mc:'m-human',   nom:'Qualifier avant d\'accepter',
+      action:'Pour toute offre d\'aide spontanée : deux questions avant d\'accepter. (1) "De quelle compétence précise avons-nous besoin ?" (2) "Cette offre correspond-elle exactement à ce besoin ?"',
+      source:'Cialdini — norme de réciprocité (2001)' },
+  ],
+  ancrage: [
+    { mod:'SENSE',  mc:'m-sense',   nom:'Zéro-based briefing',
+      action:'Repartez de zéro : présentez la situation comme si personne n\'avait d\'information préalable. Bannissez les références à ce qui "a déjà été dit". Requalifiez ensemble les faits disponibles.',
+      source:'Kahneman & Tversky (1974)' },
+    { mod:'DECIDE', mc:'m-decide',  nom:'Révision d\'hypothèse',
+      action:'"Si la première information reçue s\'avérait fausse, quelle décision prendrions-nous ?" Cette question force le détachement de l\'ancre initiale et rouvre le champ des alternatives.',
+      source:'Kahneman & Tversky (1974) — Weick (1995)' },
+    { mod:'NARRATIVE',mc:'m-narr',  nom:'Chronologie inversée',
+      action:'Reconstruisez les décisions à rebours depuis maintenant. Identifiez le moment exact où l\'ancrage s\'est produit. Nommez-le collectivement et explicitement avant de continuer.',
+      source:'Weick — narration rétrospective (1995)' },
+  ],
+  disponibilite: [
+    { mod:'SENSE',  mc:'m-sense',   nom:'Audit des sources',
+      action:'Avant de décider : listez les trois sources utilisées. Pour chacune : date, nature, fiabilité. Les événements récents ou spectaculaires sont surestimés par notre mémoire — vérifiez la base réelle.',
+      source:'Kahneman & Tversky (1974) — Harari (2024)' },
+    { mod:'DECIDE', mc:'m-decide',  nom:'Matrice de priorisation objective',
+      action:'Construisez une matrice urgence × importance à partir de données factuelles uniquement. Écartez tout critère basé sur la saillance mémorielle ou l\'émotion.',
+      source:'Simon (1947)' },
+  ],
+  representativite: [
+    { mod:'SENSE',  mc:'m-sense',   nom:'Vérification du prototype',
+      action:'"Cette situation ressemble-t-elle à un cas connu, ou seulement en surface ?" Listez trois différences concrètes avec le cas de référence avant de décider.',
+      source:'Kahneman & Tversky (1974)' },
+    { mod:'NARRATIVE',mc:'m-narr',  nom:'Scénario de rupture',
+      action:'Décrivez en 60 secondes une situation dans laquelle votre prototype de référence serait totalement inapplicable. Cet exercice révèle les limites de l\'analogie et rouvre l\'analyse.',
+      source:'Kahneman & Tversky (1974) — March & Olsen (1976)' },
+  ],
+  affect: [
+    { mod:'HUMAN',  mc:'m-human',   nom:'Décorréler affect et décision',
+      action:'Avant de décider, nommez votre état émotionnel à haute voix : "Je ressens X, ce qui me pousse vers Y." La verbalisation active la délibération consciente et réduit l\'emprise de l\'heuristique.',
+      source:'Kahneman & Tversky (1974) — Kahneman (2011)' },
+    { mod:'DECIDE', mc:'m-decide',  nom:'Pause décisionnelle',
+      action:'3 minutes de silence avant toute décision irréversible. La pause crée la distance cognitive nécessaire pour dissocier la réaction émotionnelle immédiate de la délibération raisonnée.',
+      source:'Simon (1947) — Kahneman (2011)' },
+  ],
+  simulation: [
+    { mod:'SENSE',  mc:'m-sense',   nom:'Inventaire des scénarios impensables',
+      action:'"Qu\'est-ce qu\'on n\'arrive pas à imaginer ici ?" Listez 3 scénarios difficiles à représenter mentalement. Ce qui est difficile à simuler est systématiquement sous-pondéré — nommez-le.',
+      source:'Kahneman & Tversky (1974) — March & Olsen (1972)' },
+  ],
+  default: [
+    { mod:'SENSE',  mc:'m-sense',   nom:'Micro-boucle réflexive',
+      action:'Trois questions avant toute décision irréversible : (1) Quel est le mécanisme dominant ? (2) Quelle alternative n\'a pas été envisagée ? (3) Quel signal a été ignoré ?',
+      source:'Weick (1995) — Simon (1947)' },
+    { mod:'DECIDE', mc:'m-decide',  nom:'Avocat du diable',
+      action:'Désignez formellement un contradicteur avant la délibération. Ce rôle est institutionnel et légitime. Il est "non un signe de déloyauté." (Janis, 1982, p. 258)',
+      source:'Janis (1972)' },
+  ],
+};
+
+/* Sensemaking rétrospectif — toujours en dernier */
+const CORE_RETRO = {
+  mod:'NARRATIVE', mc:'m-narr', nom:'Sensemaking rétrospectif',
+  action:'Après la décision : reconstituez la chronologie, nommez les mécanismes actifs, identifiez les indices abandonnés (dropped cues). Formulez une règle concrète que l\'organisation retient de cette situation.',
+  source:'Weick — Sensemaking in Organizations (1995)'
+};
+
+/* ═══════ BUILD DIAGNOSTIC ═══════ */
+function buildDiag() {
+  const sc  = score();
+  const lv  = level(sc);
+  const cfg = getCfg();
+  const pct = Math.round(sc / 10 * 100);
+
+  const biaisLabels = {
+    disponibilite:'Disponibilité', representativite:'Représentativité',
+    ancrage:'Ancrage', affect:'Affect', simulation:'Simulation',
+    confirmation:'Confirmation', tunnel:'Effet tunnel', conformite:'Conformité / Groupthink',
+    stress:'Stress décisionnel', pouvoir:'Jeux de pouvoir', empathie:'Empathie',
+  };
+  const orgaLabels = {
+    'hier-fort':'Hiérarchisée — gradient fort', 'hier-mod':'Hiérarchisée — gradient modéré',
+    collegiale:'Collégiale', fluide:'Fluide / adaptative',
+  };
+
+  /* SCORE BLOCK */
+  document.getElementById('diag-out').innerHTML = `
+    <div class="diag-card" style="border-left:4px solid ${lv.bc};">
+      <div class="diag-top">
+        <div>
+          <div class="diag-config-name">${cfg.nom}</div>
+          <span class="diag-badge" style="background:${lv.bg};color:${lv.tc};">${lv.lbl}</span>
+        </div>
+        <div class="diag-score-wrap">
+          <div class="diag-score-n" style="color:${lv.bc};">${sc}<span style="font-size:14px;font-weight:400;color:var(--txt3);">/10</span></div>
+          <div class="diag-score-lbl">Fragilité systémique</div>
+          <div class="gauge-bg"><div class="gauge-fill" style="width:${pct}%;background:${lv.gb};"></div></div>
+        </div>
+      </div>
+      <div class="diag-body">
+        <p class="diag-desc">${cfg.desc}</p>
+        <div class="diag-refs">${cfg.refs.map(r=>`<span class="diag-ref-tag">${r}</span>`).join('')}</div>
+      </div>
+    </div>`;
+
+  /* SYNTHESIS */
+  const biaisSelected = [...S.biais].map(b => biaisLabels[b] || b).join(', ') || '—';
+  const synthRows = [
+    ['Contrainte temporelle',      ({faible:'Faible',forte:'Forte',critique:'Critique'})[S.urgence] || '—'],
+    ['Incertitude informationnelle',({faible:'Faible',partielle:'Partielle',forte:'Forte'})[S.incert] || '—'],
+    ['Pression médiatique',        ({nulle:'Nulle',mod:'Modérée',forte:'Active'})[S.media] || '—'],
+    ['Mécanismes identifiés',      biaisSelected],
+    ['Structure',                  orgaLabels[S.orga] || '—'],
+    ['Culture',                    ({hro:'HRO — haute fiabilité',deviation:'Normalisation de la déviance'})[S.culture] || '—'],
+    ['Gestion de l\'information',  ({fluidite:'Fluidité',retention:'Rétention'})[S.info] || '—'],
+  ];
+
+  document.getElementById('synth-out').innerHTML = `
+    <div style="margin-bottom:1rem;">
+      <div class="sec-title">Synthèse de la configuration</div>
+      <div class="synth-grid">${synthRows.map(([l,v])=>`
+        <div class="synth-card">
+          <div class="synth-label">${l}</div>
+          <div class="synth-val">${v}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+
+  /* CORE CARDS — agrégation de tous les biais sélectionnés, dédoublonnage */
+  const seen = new Set();
+  const cards = [];
+  S.biais.forEach(b => {
+    (CORE[b] || []).forEach(c => {
+      if (!seen.has(c.nom)) { seen.add(c.nom); cards.push(c); }
+    });
+  });
+  if (cards.length === 0) {
+    (CORE.default || []).forEach(c => { if (!seen.has(c.nom)) { seen.add(c.nom); cards.push(c); } });
+  }
+  /* Toujours ajouter le sensemaking rétrospectif en dernier */
+  if (!seen.has(CORE_RETRO.nom)) cards.push(CORE_RETRO);
+
+  document.getElementById('core-out').innerHTML = `
+    <div class="sec-title">Contre-mesures C.O.R.E. — activez avant de décider</div>
+    <div class="core-cards">
+      ${cards.map((c,i) => `
+        <div class="core-card" id="cc${i}" onclick="toggleCC(${i})">
+          <div class="core-head">
+            <span class="core-mod ${c.mc}">${c.mod}</span>
+            <span class="core-name">${c.nom}</span>
+            <span class="core-arr">▾</span>
+          </div>
+          <div class="core-body">
+            <p class="core-action">${c.action}</p>
+            <p class="core-source">${c.source}</p>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function toggleCC(i) {
+  document.getElementById('cc' + i).classList.toggle('open');
+}
+</script>
+</body>
+</html>
